@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<!-- v7 fresh copy — open THIS file, not index.html -->
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Veritone DMH — Header Keyframes</title>
+<style>
+  :root {
+    --bg: #1E1E1E;
+    --panel: #232323;
+    --panel-face: linear-gradient(145deg, #2E2E2E 0%, #1B1B1B 55%, #242424 100%);
+    --red: #4EC3F0;
+    --white: #F5F5F3;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    font-family: -apple-system, "Helvetica Neue", Inter, sans-serif;
+    color: var(--white);
+    display: flex; flex-direction: column; align-items: center;
+    gap: 18px; padding: 24px;
+  }
+
+  /* ---------- controls ---------- */
+  .controls { display: flex; gap: 10px; align-items: center; }
+  .controls button {
+    background: #2A2A2A; color: var(--white); border: 1px solid #3A3A3A;
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  .controls button.active { background: var(--red); border-color: var(--red); }
+  .controls input[type=range] { width: 220px; accent-color: var(--red); }
+  .hint { color: #777; font-size: 12px; }
+
+  /* ?record mode: bare 1280x720 stage at 0,0 for frame capture */
+  body.record { padding: 0; gap: 0; overflow: hidden; background: #000; }
+  body.record .controls { display: none; }
+  body.record .stage { border-radius: 0; }
+
+  /* ---------- stage ---------- */
+  .stage {
+    width: 1280px; height: 720px; position: relative; overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% 38%, #262626 0%, var(--bg) 55%, #161616 100%);
+    border-radius: 6px;
+    perspective: 1600px;
+  }
+  /* subtle texture */
+  .stage::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 5px 5px;
+  }
+
+  /* ---------- banner mode (?wide=1) ----------
+     Same composition, wider frame. The wall's seam is the stage centre in both
+     modes, so widening the stage and shifting the two columns out by the same
+     320px keeps everything registered; the slabs just get more room to fly. */
+  :root { --flyO: 560px; --flyM: 660px; --floorOpen: 1180px; }
+  body.wide { --flyO: 860px; --flyM: 1000px; --floorOpen: 1760px; }
+  body.wide .stage { width: 1920px; }
+  body.wide .sA, body.wide .sB, body.wide .sC { left: 630px; }
+  body.wide .sD, body.wide .sE, body.wide .sF { left: 962px; }
+  body.wide .c1 { left:  570px; }
+  body.wide .c2 { left: 1310px; }
+  body.wide .c3 { left: 1350px; }
+  body.wide .c4 { left:  535px; }
+
+  /* chevron strip, far left (from the brand deck) */
+  .chevrons {
+    position: absolute; left: 26px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 190px; opacity: 0.55;
+    background: repeating-linear-gradient(
+      -45deg, #4A4A4A 0 3px, transparent 3px 9px);
+    -webkit-mask-image: linear-gradient(#000, #000);
+  }
+
+  /* veritone lockup, top left: official V mark + wordmark */
+  .lockup {
+    position: absolute; top: 44px; left: 56px; z-index: 40;
+    display: flex; align-items: center; gap: 10px;
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,0.5));
+  }
+  .lockup svg { width: 104px; height: 80px; }
+  .lockup .word {
+    font-size: 34px; font-weight: 600; letter-spacing: -0.5px;
+    color: var(--white); text-transform: lowercase; line-height: 1;
+  }
+
+  /* logo glyph (no background), lower right */
+  .applogo {
+    position: absolute; right: 56px; bottom: 50px; z-index: 40;
+    width: 78px; height: 78px;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,0.55));
+  }
+
+  /* ---------- title (revealed) ---------- */
+  .title {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; transform-style: preserve-3d;
+  }
+  .title .kicker {
+    font-size: 17px; letter-spacing: 8px; font-weight: 600; color: #9A9A9A;
+    text-transform: uppercase; margin-bottom: 22px;
+  }
+  .title h1 {
+    font-size: 92px; line-height: 1.02; font-weight: 700; letter-spacing: -2px;
+  }
+  .title h1 .red { color: var(--red); }
+  .title h1 .depth {
+    text-shadow:
+      0 1px 0 #3a3a3a, 0 2px 0 #363636, 0 3px 0 #313131, 0 4px 0 #2c2c2c,
+      0 5px 0 #272727, 0 6px 0 #222, 0 14px 28px rgba(0,0,0,0.65);
+  }
+  .title .rule {
+    width: 74px; height: 4px; background: var(--red); margin-top: 30px;
+    box-shadow: 0 8px 18px rgba(78,195,240,0.35);
+  }
+
+  /* ---------- panel wall ---------- */
+  .wall {
+    position: absolute; inset: 0; z-index: 20; transform-style: preserve-3d;
+  }
+  .slab {
+    position: absolute; transform-style: preserve-3d;
+    transition: transform 1.15s cubic-bezier(.7,0,.25,1);
+  }
+  /* closing: slam to the center seam, bounce OFF it (never overlap), then
+     settle shut smooth. boom -> small reopen -> gentle close. */
+  .closing .sA, .closing .sC { animation: closeLo 1.15s both; }
+  .closing .sB               { animation: closeLm 1.15s both; }
+  .closing .sD, .closing .sF { animation: closeRo 1.15s both; }
+  .closing .sE               { animation: closeRm 1.15s both; }
+  @keyframes closeLo {
+    0%   { transform: translateX(calc(-1 * var(--flyO))) translateZ(150px) rotateY( 34deg);
+           animation-timing-function: cubic-bezier(.6,0,.85,.7); }
+    50%  { transform: none;
+           animation-timing-function: cubic-bezier(.15,.75,.4,1); }
+    76%  { transform: translateX(-46px) translateZ(20px) rotateY( 5deg);
+           animation-timing-function: cubic-bezier(.45,0,.55,1); }
+    100% { transform: none; }
+  }
+  @keyframes closeLm {
+    0%   { transform: translateX(calc(-1 * var(--flyM))) translateZ(230px) rotateY( 42deg);
+           animation-timing-function: cubic-bezier(.6,0,.85,.7); }
+    50%  { transform: none;
+           animation-timing-function: cubic-bezier(.15,.75,.4,1); }
+    76%  { transform: translateX(-54px) translateZ(26px) rotateY( 6deg);
+           animation-timing-function: cubic-bezier(.45,0,.55,1); }
+    100% { transform: none; }
+  }
+  @keyframes closeRo {
+    0%   { transform: translateX(var(--flyO)) translateZ(150px) rotateY(-34deg);
+           animation-timing-function: cubic-bezier(.6,0,.85,.7); }
+    50%  { transform: none;
+           animation-timing-function: cubic-bezier(.15,.75,.4,1); }
+    76%  { transform: translateX( 46px) translateZ(20px) rotateY(-5deg);
+           animation-timing-function: cubic-bezier(.45,0,.55,1); }
+    100% { transform: none; }
+  }
+  @keyframes closeRm {
+    0%   { transform: translateX(var(--flyM)) translateZ(230px) rotateY(-42deg);
+           animation-timing-function: cubic-bezier(.6,0,.85,.7); }
+    50%  { transform: none;
+           animation-timing-function: cubic-bezier(.15,.75,.4,1); }
+    76%  { transform: translateX( 54px) translateZ(26px) rotateY(-6deg);
+           animation-timing-function: cubic-bezier(.45,0,.55,1); }
+    100% { transform: none; }
+  }
+  .slab .face {
+    position: absolute; inset: 0;
+    background: var(--panel-face);
+    border-radius: 10px; overflow: hidden;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      inset 0 -1px 0 rgba(0,0,0,0.55),
+      0 30px 60px rgba(0,0,0,0.55);
+  }
+  .slab .face video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0.9;
+    transition: opacity .55s ease;
+    /* overfill a hair so no dark fringe peeks at the rounded edges */
+    transform: scale(1.02);
+  }
+  /* dark grade over the clips so the wall still reads graphite */
+  .slab .face::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(145deg, rgba(0,0,0,0.15), rgba(0,0,0,0.5));
+  }
+  /* red glow seam on inner edge */
+  .slab.L .face { border-right: 2px solid rgba(78,195,240,0.85); box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.55),
+      0 30px 60px rgba(0,0,0,0.55), 14px 0 34px -6px rgba(78,195,240,0.35); }
+  .slab.R .face { border-left: 2px solid rgba(78,195,240,0.85); box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.55),
+      0 30px 60px rgba(0,0,0,0.55), -14px 0 34px -6px rgba(78,195,240,0.35); }
+
+  /* CLOSED geometry: 2 columns x 3 rows meeting at center seam (x=640) */
+  .slab { width: 330px; height: 194px; }
+  .sA { left: 310px; top:  66px; }  /* L top */
+  .sB { left: 310px; top: 264px; }  /* L mid */
+  .sC { left: 310px; top: 462px; }  /* L bot */
+  .sD { left: 642px; top:  66px; }  /* R top */
+  .sE { left: 642px; top: 264px; }  /* R mid */
+  .sF { left: 642px; top: 462px; }  /* R bot */
+
+  /* OPEN transforms: split outward, rotate away, gain depth */
+  .open .sA { transform: translateX(calc(-1 * var(--flyO))) translateZ(150px) rotateY( 34deg); }
+  .open .sB { transform: translateX(calc(-1 * var(--flyM))) translateZ(230px) rotateY( 42deg); }
+  .open .sC { transform: translateX(calc(-1 * var(--flyO))) translateZ(150px) rotateY( 34deg); }
+  .open .sD { transform: translateX(var(--flyO)) translateZ(150px) rotateY(-34deg); }
+  .open .sE { transform: translateX(var(--flyM)) translateZ(230px) rotateY(-42deg); }
+  .open .sF { transform: translateX(var(--flyO)) translateZ(150px) rotateY(-34deg); }
+
+  /* small floating accent cubes, only visible open */
+  .cube {
+    position: absolute; width: 26px; height: 26px; z-index: 15;
+    background: linear-gradient(145deg, #333, #1c1c1c);
+    border-radius: 5px; box-shadow: 0 16px 30px rgba(0,0,0,0.6);
+    opacity: 0; transition: opacity .9s ease .35s, transform 1.15s cubic-bezier(.7,0,.25,1);
+  }
+  .cube.red { background: var(--red); box-shadow: 0 16px 30px rgba(78,195,240,0.35); }
+  .c1 { left: 250px; top: 170px; }
+  .c2 { left: 990px; top: 140px; }
+  .c3 { left: 1030px; top: 520px; }
+  .c4 { left: 215px; top: 500px; }
+  /* explode out with overshoot, then settle in the same spots as before */
+  .open .cube { opacity: 1; }
+  /* hold beat: once settled, cubes drift lazily until the wall closes */
+  .open .c1 { animation: pop1 1.3s cubic-bezier(.2,.9,.3,1.05) .2s both,
+              drift1 4.5s ease-in-out 1.5s infinite alternate; }
+  .open .c2 { animation: pop2 1.3s cubic-bezier(.2,.9,.3,1.05) .28s both,
+              drift2 5.2s ease-in-out 1.6s infinite alternate; }
+  .open .c3 { animation: pop3 1.3s cubic-bezier(.2,.9,.3,1.05) .24s both,
+              drift3 4.8s ease-in-out 1.55s infinite alternate; }
+  .open .c4 { animation: pop4 1.3s cubic-bezier(.2,.9,.3,1.05) .32s both,
+              drift4 5.5s ease-in-out 1.65s infinite alternate; }
+  @keyframes drift1 {
+    from { transform: translate(-30px,-24px)  rotate(258deg)  scale(1.15); }
+    50%  { transform: translate(-70px,-70px)  rotate(276deg)  scale(1.42); }
+    to   { transform: translate(-52px,-20px)  rotate(290deg)  scale(1.08); }
+  }
+  @keyframes drift2 {
+    from { transform: translate(26px,-30px)   rotate(-266deg) scale(1.2); }
+    50%  { transform: translate(76px,-64px)   rotate(-286deg) scale(1.5); }
+    to   { transform: translate(48px,-8px)    rotate(-300deg) scale(1.1); }
+  }
+  @keyframes drift3 {
+    from { transform: translate(34px,22px)    rotate(252deg)  scale(1.1); }
+    50%  { transform: translate(66px,72px)    rotate(232deg)  scale(1.45); }
+    to   { transform: translate(18px,52px)    rotate(220deg)  scale(1.05); }
+  }
+  @keyframes drift4 {
+    from { transform: translate(-26px,28px)   rotate(-276deg) scale(1.2); }
+    50%  { transform: translate(-78px,66px)   rotate(-296deg) scale(1.48); }
+    to   { transform: translate(-44px,10px)   rotate(-310deg) scale(1.12); }
+  }
+
+  /* hold beat: a shine sweeps across the WORDS themselves (masked to glyphs) */
+  .wm {
+    position: relative; width: 540px; margin-bottom: 18px;
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,0.65));
+  }
+  .wm img { width: 100%; display: block; }
+  .wmShine {
+    position: absolute; inset: 0;
+    -webkit-mask: url('wordmark-white.png') center/contain no-repeat;
+    mask: url('wordmark-white.png') center/contain no-repeat;
+  }
+  .glint {
+    background: linear-gradient(100deg, transparent 42%,
+      rgba(255,255,255,0.65) 50%, transparent 58%);
+    background-size: 250% 100%; background-repeat: no-repeat;
+    background-position: 130% 0; opacity: 0; pointer-events: none;
+  }
+  .line2 { position: relative; }
+  .line2::after {
+    content: "DMH"; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 42%,
+      rgba(255,255,255,0.65) 50%, transparent 58%);
+    background-size: 250% 100%; background-repeat: no-repeat;
+    background-position: 130% 0;
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; opacity: 0; pointer-events: none;
+  }
+  .open .glint, .open .line2::after {
+    opacity: 1; animation: glint 3.4s ease-in-out 1.8s infinite;
+  }
+  @keyframes glint {
+    0%        { background-position: 130% 0; }
+    45%, 100% { background-position: -140% 0; }
+  }
+
+  /* closing: cubes get sucked back into the center with a twist, then vanish */
+  .closing .c1 { animation: suck1 .85s cubic-bezier(.6,0,.8,.4) both; }
+  .closing .c2 { animation: suck2 .85s cubic-bezier(.6,0,.8,.4) .06s both; }
+  .closing .c3 { animation: suck3 .85s cubic-bezier(.6,0,.8,.4) .03s both; }
+  .closing .c4 { animation: suck4 .85s cubic-bezier(.6,0,.8,.4) .09s both; }
+  /* no 0% keyframe on purpose: each cube starts the suck from wherever its
+     drift left it (JS freezes the live transform first), so there's no snap */
+  @keyframes suck1 {
+    to { transform: translate(330px,160px) rotate(60deg)   scale(.2); opacity: 0; }
+  }
+  @keyframes suck2 {
+    to { transform: translate(-300px,190px) rotate(-60deg) scale(.2); opacity: 0; }
+  }
+  @keyframes suck3 {
+    to { transform: translate(-340px,-130px) rotate(50deg) scale(.2); opacity: 0; }
+  }
+  @keyframes suck4 {
+    to { transform: translate(370px,-120px) rotate(-70deg) scale(.2); opacity: 0; }
+  }
+
+  /* cubes are born at the title in the center, burst outward, twist, settle */
+  @keyframes pop1 {
+    0%   { transform: translate(330px,160px)  rotate(0)      scale(.25); opacity: 0; }
+    55%  { transform: translate(-110px,-90px) rotate(200deg) scale(1.8); opacity: 1; }
+    100% { transform: translate(-30px,-24px)  rotate(258deg) scale(1.15); }
+  }
+  @keyframes pop2 {
+    0%   { transform: translate(-300px,190px) rotate(0)       scale(.25); opacity: 0; }
+    55%  { transform: translate(120px,-105px) rotate(-210deg) scale(2.0); opacity: 1; }
+    100% { transform: translate(26px,-30px)   rotate(-266deg) scale(1.2); }
+  }
+  @keyframes pop3 {
+    0%   { transform: translate(-340px,-130px) rotate(0)      scale(.25); opacity: 0; }
+    55%  { transform: translate(115px,90px)    rotate(190deg) scale(1.7); opacity: 1; }
+    100% { transform: translate(34px,22px)     rotate(252deg) scale(1.1); }
+  }
+  @keyframes pop4 {
+    0%   { transform: translate(370px,-120px)  rotate(0)       scale(.25); opacity: 0; }
+    55%  { transform: translate(-120px,100px)  rotate(-220deg) scale(1.9); opacity: 1; }
+    100% { transform: translate(-26px,28px)    rotate(-276deg) scale(1.2); }
+  }
+
+  /* title hides behind wall when closed */
+  .title { opacity: 0; transform: scale(0.92); transition: opacity .8s ease .25s, transform 1.15s cubic-bezier(.7,0,.25,1); }
+  .open .title { opacity: 1; transform: scale(1); }
+
+  /* floor shadow under the wall */
+  .floorShadow {
+    position: absolute; left: 50%; bottom: 34px; z-index: 5;
+    width: 760px; height: 60px; transform: translateX(-50%);
+    background: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,0.55), transparent 70%);
+    filter: blur(6px);
+    transition: width 1.15s cubic-bezier(.7,0,.25,1);
+  }
+  .open .floorShadow { width: var(--floorOpen); }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <button id="bClosed" class="active">Frame A — closed</button>
+    <button id="bOpen">Frame B — open</button>
+    <button id="bLoop">Play loop</button>
+    <span class="hint">1280 × 720 · these two states become Kling's start/end frames</span>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="lockup">
+      <svg viewBox="0 0 154 118" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(0,118) scale(0.1,-0.1)" fill="#F5F5F3">
+          <path d="M38 1122 c20 -33 129 -201 242 -375 l205 -317 132 0 133 0 -93 142 c-51 79 -160 248 -242 375 l-150 233 -132 0 -132 0 37 -58z"/>
+          <path d="M980 724 c-162 -251 -305 -473 -318 -494 l-23 -38 61 -96 c34 -53 65 -96 69 -96 5 0 171 253 371 562 200 310 372 575 382 591 l19 27 -133 0 -133 -1 -295 -455z"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="title">
+      <div class="kicker">Introducing</div>
+      <div class="wm">
+        <img src="wordmark-white.png" alt="veritone">
+        <div class="glint wmShine"></div>
+      </div>
+      <h1 class="line2"><span class="depth">DM<span class="red">H</span></span></h1>
+      <div class="rule"></div>
+    </div>
+
+    <svg class="applogo" viewBox="180 180 670 660" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="235" y="240" width="120" height="110" rx="28" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="440" y="215" width="155" height="160" rx="34" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="680" y="245" width="120" height="110" rx="28" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="215" y="440" width="155" height="155" rx="34" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="455" y="470" width="125" height="115" rx="28" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="655" y="445" width="160" height="155" rx="34" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="230" y="685" width="120" height="110" rx="28" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="440" y="655" width="155" height="150" rx="34" stroke="#F5F5F3" stroke-width="30"/>
+      <rect x="665" y="655" width="155" height="160" rx="30" fill="#4EC3F0"/>
+    </svg>
+
+
+    <div class="floorShadow"></div>
+
+    <div class="cube c1"></div>
+    <div class="cube red c2"></div>
+    <div class="cube c3"></div>
+    <div class="cube red c4"></div>
+
+    <div class="wall">
+      <div class="slab L sA"><div class="face"><video src="vids/sport-01.mp4" autoplay muted loop playsinline></video></div></div>
+      <div class="slab L sB"><div class="face"><video src="vids/game-02.mp4" autoplay muted loop playsinline></video></div></div>
+      <div class="slab L sC"><div class="face"><video src="vids/court-01.mp4" autoplay muted loop playsinline></video></div></div>
+      <div class="slab R sD"><div class="face"><video src="vids/team-01.mp4" autoplay muted loop playsinline></video></div></div>
+      <div class="slab R sE"><div class="face"><video src="vids/sport-05.mp4" autoplay muted loop playsinline></video></div></div>
+      <div class="slab R sF"><div class="face"><video src="vids/game-04.mp4" autoplay muted loop playsinline></video></div></div>
+    </div>
+  </div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const bC = document.getElementById('bClosed');
+  const bO = document.getElementById('bOpen');
+  const bL = document.getElementById('bLoop');
+  let loopTimer = null;
+
+  // clip shuffle: two sets of six; swap while the wall is open (panels are
+  // offscreen) so the reopen reveals fresh clips
+  // three sets, three cycles: set0 -> set1 -> set2 -> back to set0, so a
+  // 3-cycle recording ends exactly where it began = seamless replay
+  const clipSets = [
+    ['sport-01','game-02','court-01','team-01','sport-05','game-04'],
+    ['sport-03','game-01','court-03','team-02','sport-04','game-03'],
+    ['sport-02','sport-06','court-02','team-03','court-04','team-04'],
+  ];
+  let clipSet = 0;
+  // double-buffer each panel: two stacked videos, new one fades IN while the
+  // old one fades OUT — a real crossfade, never a dip to black
+  document.querySelectorAll('.slab .face').forEach(face => {
+    const v = face.querySelector('video');
+    v.classList.add('front');
+    const ghost = v.cloneNode();
+    ghost.classList.remove('front');
+    ghost.removeAttribute('src');
+    ghost.style.opacity = 0;
+    face.appendChild(ghost);
+  });
+
+  function swapClips() {
+    clipSet = (clipSet + 1) % clipSets.length;
+    document.querySelectorAll('.slab .face').forEach((face, i) => {
+      const front = face.querySelector('video.front');
+      const back = [...face.querySelectorAll('video')].find(v => v !== front);
+      back.src = 'vids/' + clipSets[clipSet][i] + '.mp4';
+      back.addEventListener('canplay', () => {
+        back.play().catch(() => {});
+        back.style.opacity = 0.9;   // fades in...
+        front.style.opacity = 0;    // ...as this fades out, simultaneously
+        back.classList.add('front');
+        front.classList.remove('front');
+        setTimeout(() => front.pause(), 700);
+      }, { once: true });
+    });
+  }
+
+  function setState(open) {
+    // leaving open state: play the suck-back animation on the cubes.
+    // Freeze each cube exactly where its drift has it RIGHT NOW, so the
+    // suck starts from there instead of snapping to the settle point.
+    if (!open && stage.classList.contains('open')) {
+      const cubes = [...stage.querySelectorAll('.cube')];
+      cubes.forEach(c => {
+        c.style.transform = getComputedStyle(c).transform;
+        c.style.opacity = getComputedStyle(c).opacity;
+      });
+      stage.classList.add('closing');
+      setTimeout(() => {
+        stage.classList.remove('closing');
+        cubes.forEach(c => { c.style.transform = ''; c.style.opacity = ''; });
+      }, 1250);
+    }
+    if (open && !stage.classList.contains('open')) {
+      // wall just opened — once panels are out of view, load the next set
+      setTimeout(swapClips, 1300);
+    }
+    stage.classList.toggle('open', open);
+    bO.classList.toggle('active', open);
+    bC.classList.toggle('active', !open);
+  }
+  bC.onclick = () => { stopLoop(); setState(false); };
+  bO.onclick = () => { stopLoop(); setState(true); };
+  // loop with a hold beat: open, linger while cubes drift + light sweeps,
+  // close, short closed beat (fresh clips), reopen
+  let loopTimers = [];
+  bL.onclick = () => {
+    if (loopTimers.length) return stopLoop();
+    bL.classList.add('active');
+    (function cycle() {
+      setState(true);                                      // open + burst
+      loopTimers = [
+        setTimeout(() => setState(false), 7200),           // hold, then close
+        setTimeout(cycle, 11200),                          // closed beat, reopen
+      ];
+    })();
+  };
+  function stopLoop() {
+    loopTimers.forEach(clearTimeout); loopTimers = [];
+    bL.classList.remove('active');
+  }
+
+  const params = new URLSearchParams(location.search);
+  if (params.has('record')) document.body.classList.add('record');
+  // ?wide=1 → 1920x720 banner frame for the DMH web hero
+  if (params.has('wide')) document.body.classList.add('wide');
+  // ?loop=1 -> bare stage, cycle starts on its own (the portfolio card embeds it this way)
+  if (params.has('loop')) { document.body.classList.add('record'); bL.onclick(); }
+
+  // live reload: poll the file, refresh when it changes
+  let lastMod = null;
+  if (!params.has('loop')) setInterval(async () => {
+    try {
+      const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
+      const m = r.headers.get('Last-Modified');
+      if (lastMod && m && m !== lastMod) location.reload();
+      lastMod = m;
+    } catch (e) {}
+  }, 800);
+</script>
+</body>
+</html>

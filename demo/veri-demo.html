@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERI Investigate Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: transparent; font-family: Inter, system-ui, -apple-system, sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+
+  .demo { width: 100%; max-width: 720; border-radius: 16px; overflow: hidden; border: 1px solid #E5E5E5; background: white; box-shadow: 0 8px 40px rgba(0,0,0,0.12); }
+
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #E5E5E5; background: #FAFBFC; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .brand-veri { font-weight: 700; color: #875DF4; font-size: 18px; }
+  .brand-name { font-weight: 300; color: #0F172A; font-size: 15px; }
+  .brand-sub { font-size: 10px; color: #94A3B8; }
+  .badge { padding: 3px 12px; border-radius: 20px; background: #10B981; color: white; font-size: 10px; font-weight: 600; }
+
+  .tabs { display: flex; border-bottom: 1px solid #E5E5E5; }
+  .tab { flex: 1; padding: 10px 0; font-size: 12px; font-weight: 600; cursor: pointer; background: #FAFBFC; color: #64748B; border: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab.active { background: white; color: #875DF4; border-bottom-color: #875DF4; }
+  .tab:hover:not(.active) { color: #334155; }
+
+  .content { height: 360px; position: relative; overflow: hidden; }
+  .panel { display: none; height: 100%; }
+  .panel.active { display: block; }
+
+  /* Overview */
+  .overview { padding: 18px; overflow-y: auto; height: 100%; }
+  .section-title { font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 14px; }
+  .suspect { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid #E5E5E5; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+  .suspect:hover { transform: translateX(4px); }
+  .suspect-num { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0; }
+  .suspect-info { flex: 1; }
+  .suspect-name { font-weight: 600; font-size: 14px; color: #0F172A; }
+  .suspect-role { font-size: 11px; color: #64748B; }
+  .suspect-score { text-align: right; }
+  .suspect-pct { font-weight: 700; font-size: 20px; }
+  .suspect-conf { font-size: 9px; color: #94A3B8; font-weight: 600; }
+  .score-bar { width: 70px; height: 5px; border-radius: 3px; background: #E5E5E5; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; transition: width 1s ease-out; }
+  .ai-box { margin-top: 14px; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(135,93,244,0.15); background: rgba(135,93,244,0.03); }
+  .ai-label { font-size: 10px; color: #875DF4; font-weight: 600; margin-bottom: 3px; }
+  .ai-text { font-size: 12px; color: #475569; line-height: 1.6; }
+
+  /* Map */
+  .map-container { position: relative; width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+  .map-container img { width: 100%; height: 100%; object-fit: cover; }
+  .marker { position: absolute; transform: translate(-50%,-50%); cursor: grab; transition: transform 0.2s; z-index: 1; }
+  .marker:hover { z-index: 10; transform: translate(-50%,-50%) scale(1.25); }
+  .marker-dot { border-radius: 50%; border: 2.5px solid white; }
+  .marker-label { position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 600; color: white; white-space: nowrap; }
+
+  /* Evidence Board */
+  .board { position: relative; width: 100%; height: 100%; background: #FAFBFC; touch-action: none; }
+  .board svg { position: absolute; top: 0; left: 0; }
+  .node { display: inline-block; padding: 5px 12px; border-radius: 7px; border-width: 2px; border-style: solid; background: white; font-size: 12px; font-weight: 600; cursor: grab; transition: all 0.2s; white-space: nowrap; user-select: none; }
+  .node:hover { transform: scale(1.1); }
+
+  /* Timeline */
+  .timeline { padding: 14px 20px; overflow-y: auto; height: 100%; }
+  .tl-track { position: relative; padding-left: 28px; }
+  .tl-line { position: absolute; left: 8px; top: 6px; bottom: 6px; width: 2.5px; background: linear-gradient(to bottom, #875DF4, #CBD5E1); border-radius: 2px; }
+  .tl-item { margin-bottom: 16px; position: relative; }
+  .tl-dot { position: absolute; left: -22px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 0 0 2px #E5E5E5; }
+  .tl-time { font-size: 11px; font-weight: 700; color: #875DF4; margin-bottom: 3px; }
+  .tl-event { font-size: 13px; color: #0F172A; line-height: 1.5; }
+
+  .footer { padding: 10px 20px; border-top: 1px solid #E5E5E5; background: #FAFBFC; display: flex; justify-content: space-between; align-items: center; }
+  .footer-left { font-size: 9px; color: #94A3B8; }
+  .footer-right { font-size: 9px; color: #875DF4; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="demo">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div id="veribot-container" style="width:48px;height:26px;overflow:visible;cursor:pointer"></div>
+      <div>
+        <div><span class="brand-veri">veri</span><span class="brand-name">Investigate</span></div>
+        <div class="brand-sub">AI-Powered Case Intelligence</div>
+      </div>
+    </div>
+    <div class="badge">VERIFIED</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="map">Map</button>
+    <button class="tab" data-tab="board">Evidence Board</button>
+    <button class="tab" data-tab="timeline">Timeline</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Overview -->
+    <div class="panel active" id="panel-overview">
+      <div class="overview">
+        <div class="section-title">Persons of Interest</div>
+        <div class="suspect" style="border-color:#E5E5E5" onmouseenter="this.style.borderColor='#EF4444'" onmouseleave="this.style.borderColor='#E5E5E5'">
+          <div class="suspect-num" style="background:#EF444420;color:#EF4444">#1</div>
+          <div class="suspect-info"><div class="suspect-name">Daniel Marsh</div><div class="suspect-role">Primary Suspect</div></div>
+          <div class="suspect-score"><div class="suspect-pct" style="color:#EF4444" id="score-anim">0%</div><div class="suspect-conf">Strong</div></div>
+          <div class="score-bar"><div class="score-fill" style="background:#EF4444;width:0%" id="bar-anim"></div></div>
+        </div>
+        <div class="suspect" onmouseenter="this.style.borderColor='#F97316'" onmouseleave="this.style.borderColor='#E5E5E5'">
+          <div class="suspect-num" style="background:#F9731620;color:#F97316">#2</div>
+          <div class="suspect-info"><div class="suspect-name">Tyler Brixton</div><div class="suspect-role">Person of Interest</div></div>
+          <div class="suspect-score"><div class="suspect-pct" style="color:#F97316">15%</div><div class="suspect-conf">Weak</div></div>
+          <div class="score-bar"><div class="score-fill" style="background:#F97316;width:15%"></div></div>
+        </div>
+        <div class="suspect" onmouseenter="this.style.borderColor='#94A3B8'" onmouseleave="this.style.borderColor='#E5E5E5'">
+          <div class="suspect-num" style="background:#94A3B820;color:#94A3B8">#3</div>
+          <div class="suspect-info"><div class="suspect-name">Victor Saldana</div><div class="suspect-role">Witness</div></div>
+          <div class="suspect-score"><div class="suspect-pct" style="color:#94A3B8">8%</div><div class="suspect-conf">Speculative</div></div>
+          <div class="score-bar"><div class="score-fill" style="background:#94A3B8;width:8%"></div></div>
+        </div>
+        <div class="ai-box">
+          <div class="ai-label">AI ASSESSMENT</div>
+          <div class="ai-text">Physical evidence strongly links Daniel Marsh to the incident. Paint transfer analysis, vehicle damage pattern, and cell tower data corroborate witness accounts.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div class="panel" id="panel-map">
+      <div class="map-container" id="map-container">
+        <img src="tucson-map.png" alt="Tucson area map">
+        <div class="marker" style="left:45%;top:35%" data-idx="0"><div class="marker-dot" style="width:22px;height:22px;background:#EF4444;box-shadow:0 2px 8px #EF444480"></div><div class="marker-label">Crime Scene</div></div>
+        <div class="marker" style="left:30%;top:55%" data-idx="1"><div class="marker-dot" style="width:18px;height:18px;background:#F97316;box-shadow:0 2px 8px #F9731680"></div><div class="marker-label">Suspect Home</div></div>
+        <div class="marker" style="left:60%;top:25%" data-idx="2"><div class="marker-dot" style="width:18px;height:18px;background:#3B82F6;box-shadow:0 2px 8px #3B82F680"></div><div class="marker-label">Witness Location</div></div>
+        <div class="marker" style="left:75%;top:60%" data-idx="3"><div class="marker-dot" style="width:18px;height:18px;background:#875DF4;box-shadow:0 2px 8px #875DF480"></div><div class="marker-label">Auto Body Shop</div></div>
+        <div class="marker" style="left:20%;top:30%" data-idx="4"><div class="marker-dot" style="width:18px;height:18px;background:#10B981;box-shadow:0 2px 8px #10B98180"></div><div class="marker-label">Gentle Ben's</div></div>
+      </div>
+    </div>
+
+    <!-- Evidence Board -->
+    <div class="panel" id="panel-board">
+      <div class="board" id="board">
+        <svg width="100%" height="100%" viewBox="0 0 560 200" id="board-svg"></svg>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="panel" id="panel-timeline">
+      <div class="timeline">
+        <div class="tl-track">
+          <div class="tl-line"></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#F97316"></div><div class="tl-time">9:30 PM</div><div class="tl-event">Suspect leaves Gentle Ben's Brewing</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#EF4444"></div><div class="tl-time">9:42 PM</div><div class="tl-event">Dark truck runs red light at Campbell & Grant</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#EF4444"></div><div class="tl-time">9:47 PM</div><div class="tl-event">Pedestrian struck in crosswalk</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#F97316"></div><div class="tl-time">9:48 PM</div><div class="tl-event">911 call placed by witness</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#94A3B8"></div><div class="tl-time">10:15 PM</div><div class="tl-event">Officers arrive at scene</div></div>
+          <div class="tl-item"><div class="tl-dot" style="background:#F97316"></div><div class="tl-time">Next Day</div><div class="tl-event">Vehicle taken to auto body shop</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">17 evidence items &middot; 42 entities &middot; 86 timeline events</div>
+    <div class="footer-right">Powered by Claude AI</div>
+  </div>
+</div>
+
+<script>
+// Tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Score animation
+let frame = 0, target = 92, dur = 50;
+const scoreEl = document.getElementById('score-anim');
+const barEl = document.getElementById('bar-anim');
+const iv = setInterval(() => {
+  frame++;
+  const v = Math.round((frame / dur) * target);
+  scoreEl.textContent = v + '%';
+  barEl.style.width = v + '%';
+  if (frame >= dur) clearInterval(iv);
+}, 25);
+
+// Map marker dragging
+const mapContainer = document.getElementById('map-container');
+let dragMarker = null, dragStart = null;
+document.querySelectorAll('.marker').forEach(m => {
+  m.addEventListener('pointerdown', e => {
+    dragMarker = m;
+    dragStart = { x: e.clientX, y: e.clientY, left: parseFloat(m.style.left), top: parseFloat(m.style.top) };
+    m.setPointerCapture(e.pointerId);
+  });
+});
+document.addEventListener('pointermove', e => {
+  if (!dragMarker || !mapContainer) return;
+  const rect = mapContainer.getBoundingClientRect();
+  const dx = ((e.clientX - dragStart.x) / rect.width) * 100;
+  const dy = ((e.clientY - dragStart.y) / rect.height) * 100;
+  dragMarker.style.left = (dragStart.left + dx) + '%';
+  dragMarker.style.top = (dragStart.top + dy) + '%';
+});
+document.addEventListener('pointerup', () => { dragMarker = null; });
+
+// Evidence Board
+const nodes = [
+  { id:1, label:"Daniel Marsh", color:"#EF4444", x:20, y:100 },
+  { id:2, label:"520-555-0199", color:"#8B5CF6", x:160, y:20 },
+  { id:3, label:"Toyota Tacoma", color:"#10B981", x:170, y:100 },
+  { id:4, label:"Crime Scene", color:"#875DF4", x:310, y:60 },
+  { id:5, label:"Marcus Chen", color:"#3B82F6", x:420, y:20 },
+  { id:6, label:"Thomas Aquino", color:"#3B82F6", x:400, y:130 },
+  { id:7, label:"Paint Transfer", color:"#D946EF", x:290, y:150 },
+];
+const edges = [{f:1,t:2},{f:1,t:3},{f:3,t:4},{f:4,t:5},{f:4,t:6},{f:4,t:7},{f:3,t:7}];
+const boardSvg = document.getElementById('board-svg');
+const pos = {};
+const nodeEls = {};
+const lineEls = [];
+
+// Create edges first
+edges.forEach((e,i) => {
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('stroke','#CBD5E1'); line.setAttribute('stroke-width','1.5');
+  line.setAttribute('stroke-dasharray','4,3');
+  line.style.transition = 'all 0.15s';
+  boardSvg.appendChild(line);
+  lineEls.push({line, from:e.f, to:e.t});
+});
+
+// Create nodes
+nodes.forEach(n => {
+  pos[n.id] = {x:n.x, y:n.y};
+  const fo = document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
+  fo.setAttribute('x', n.x); fo.setAttribute('y', n.y);
+  fo.setAttribute('width','1'); fo.setAttribute('height','1');
+  fo.setAttribute('overflow','visible');
+
+  const div = document.createElement('div');
+  div.className = 'node';
+  div.style.borderColor = n.color; div.style.color = n.color;
+  div.textContent = n.label;
+  div.addEventListener('mouseenter', () => {
+    div.style.background = n.color + '15';
+    div.style.boxShadow = '0 2px 8px ' + n.color + '30';
+    lineEls.forEach(le => {
+      if (le.from === n.id || le.to === n.id) {
+        le.line.setAttribute('stroke','#875DF4'); le.line.setAttribute('stroke-width','2.5');
+      }
+    });
+  });
+  div.addEventListener('mouseleave', () => {
+    div.style.background = 'white'; div.style.boxShadow = 'none';
+    lineEls.forEach(le => { le.line.setAttribute('stroke','#CBD5E1'); le.line.setAttribute('stroke-width','1.5'); });
+  });
+
+  let drag = null;
+  div.addEventListener('pointerdown', e2 => {
+    const svgRect = boardSvg.getBoundingClientRect();
+    const sx = (e2.clientX - svgRect.left) / svgRect.width * 560;
+    const sy = (e2.clientY - svgRect.top) / svgRect.height * 200;
+    drag = { startX: sx, startY: sy, origX: pos[n.id].x, origY: pos[n.id].y };
+    div.setPointerCapture(e2.pointerId);
+    div.style.transition = 'none';
+  });
+  div.addEventListener('pointermove', e2 => {
+    if (!drag) return;
+    const svgRect = boardSvg.getBoundingClientRect();
+    const sx = (e2.clientX - svgRect.left) / svgRect.width * 560;
+    const sy = (e2.clientY - svgRect.top) / svgRect.height * 200;
+    pos[n.id].x = drag.origX + (sx - drag.startX);
+    pos[n.id].y = drag.origY + (sy - drag.startY);
+    fo.setAttribute('x', pos[n.id].x); fo.setAttribute('y', pos[n.id].y);
+    updateLines();
+  });
+  div.addEventListener('pointerup', () => { drag = null; div.style.transition = 'all 0.2s'; });
+
+  fo.appendChild(div);
+  boardSvg.appendChild(fo);
+  nodeEls[n.id] = { fo, div, w: 0, h: 0 };
+  requestAnimationFrame(() => { nodeEls[n.id].w = div.offsetWidth; nodeEls[n.id].h = div.offsetHeight; updateLines(); });
+});
+
+function updateLines() {
+  lineEls.forEach(le => {
+    const fn = nodeEls[le.from], tn = nodeEls[le.to];
+    const fx = pos[le.from].x + (fn.w||80)/2, fy = pos[le.from].y + (fn.h||28)/2;
+    const tx = pos[le.to].x + (tn.w||80)/2, ty = pos[le.to].y + (tn.h||28)/2;
+    le.line.setAttribute('x1',fx); le.line.setAttribute('y1',fy);
+    le.line.setAttribute('x2',tx); le.line.setAttribute('y2',ty);
+  });
+}
+setTimeout(updateLines, 100);
+
+// VeriBot (simplified SVG)
+const botContainer = document.getElementById('veribot-container');
+const botSvg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+botSvg.setAttribute('viewBox','180 180 620 340'); botSvg.setAttribute('width','48'); botSvg.setAttribute('height','26');
+botSvg.style.overflow = 'visible';
+botSvg.innerHTML = `
+  <rect fill="#674ea7" stroke="#674ea7" stroke-width="8" x="233.8" y="299.7" width="26.7" height="61.7"/>
+  <rect fill="#674ea7" stroke="#674ea7" stroke-width="8" x="670.9" y="299.7" width="26.7" height="61.7"/>
+  <path fill="#8e7cc3" stroke="#674ea7" stroke-width="8" d="m280.77692 228.66667l7.503937-30.015747l355.00784 0l7.5039673 30.015747z"/>
+  <path fill="#8e7cc3" stroke="#674ea7" stroke-width="8" d="m612.71466 479.76395l-293.85815 0l-58.33078-58.33078l0-188.88107l4.4417114-4.441681l401.63632 0l4.4416504 4.441681l0 188.88107z"/>
+  <rect fill="#8e7cc3" stroke="#674ea7" stroke-width="8" x="204.1" y="266.4" width="29.4" height="125.5"/>
+  <rect fill="#8e7cc3" stroke="#674ea7" stroke-width="8" x="697.9" y="266.4" width="29.4" height="125.5"/>
+  <rect fill="#fff" x="359.7" y="297.5" width="56.4" height="120.3" rx="9.4"/>
+  <rect fill="#fff" x="515.3" y="297.5" width="56.4" height="120.3" rx="9.4"/>
+  <rect fill="#20124d" x="367.65" y="328.4" width="40.5" height="58.5" rx="6.75"/>
+  <rect fill="#20124d" x="523.25" y="328.4" width="40.5" height="58.5" rx="6.75"/>
+`;
+botContainer.appendChild(botSvg);
+</script>
+</body>
+</html>
