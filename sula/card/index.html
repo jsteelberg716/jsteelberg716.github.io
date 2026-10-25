@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sula</title>
+<style>
+html, body { margin: 0; height: 100%; overflow: hidden; background: #E2336F; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  -webkit-mask-image: radial-gradient(ellipse 30% 44% at 50% 50%, rgba(0,0,0,.08) 0%, rgba(0,0,0,.35) 55%, #000 100%);
+  mask-image: radial-gradient(ellipse 30% 44% at 50% 50%, rgba(0,0,0,.08) 0%, rgba(0,0,0,.35) 55%, #000 100%); }
+.glow { position: absolute; inset: 0; background: radial-gradient(ellipse 34% 52% at 50% 50%, rgba(255,255,255,.10), rgba(255,255,255,0) 70%); }
+.lockup { position: absolute; left: 50%; top: 50%; width: clamp(160px, 27vw, 340px); height: auto; transform: translate(-50%, -50%);
+  filter: drop-shadow(0 18px 30px rgba(110,18,51,.28)); }
+</style>
+</head>
+<body>
+<canvas aria-hidden="true"></canvas>
+<div class="glow" aria-hidden="true"></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 83.3 31" class="lockup" role="img" aria-label="Sula"><svg x="0" y="0" width="22" height="31" viewBox="46 24 108 152"><path d="M97 28A46 46 0 0 0 97 120Z" fill="#F59BBB"/><path d="M103 80A46 46 0 0 1 103 172Z" fill="#FFFFFF"/></svg><g fill="#FFFFFF" transform="translate(29.59 25) scale(0.026 -0.026)"><path transform="translate(0.0 0)" d="M289 -4Q219 -4 159.5 17.5Q100 39 67 72Q52 88 54.5 108.5Q57 129 74 142Q94 158 113.5 155.5Q133 153 147 138Q164 119 201.5 102.5Q239 86 285 86Q343 86 373.5 105.0Q404 124 405 154Q406 184 376.5 206.0Q347 228 269 242Q168 262 122.5 302.0Q77 342 77 400Q77 451 107.0 484.5Q137 518 184.0 534.5Q231 551 282 551Q348 551 399.0 530.0Q450 509 480 472Q494 456 493.0 438.5Q492 421 476 409Q460 398 438.0 402.0Q416 406 401 420Q376 444 347.0 453.0Q318 462 280 462Q236 462 205.5 447.0Q175 432 175 403Q175 385 184.5 370.5Q194 356 222.0 344.5Q250 333 304 322Q379 307 422.5 284.0Q466 261 485.0 230.5Q504 200 504 160Q504 114 479.5 77.0Q455 40 407.5 18.0Q360 -4 289 -4Z"/><path transform="translate(512.2 0)" d="M320 -5Q251 -5 196.5 24.5Q142 54 110.5 111.0Q79 168 79 251V497Q79 519 93.5 533.5Q108 548 130 548Q152 548 166.5 533.5Q181 519 181 497V251Q181 195 202.0 158.5Q223 122 259.0 104.5Q295 87 340 87Q383 87 416.5 104.0Q450 121 470.0 150.0Q490 179 490 215H553Q553 153 522.5 103.0Q492 53 439.5 24.0Q387 -5 320 -5ZM541 0Q519 0 504.5 14.5Q490 29 490 51V497Q490 520 504.5 534.0Q519 548 541 548Q564 548 578.0 534.0Q592 520 592 497V51Q592 29 578.0 14.5Q564 0 541 0Z"/><path transform="translate(1163.5 0)" d="M220 0Q176 0 142.0 24.0Q108 48 89.0 89.5Q70 131 70 185V731Q70 753 84.0 767.0Q98 781 120 781Q142 781 156.0 767.0Q170 753 170 731V185Q170 148 184.0 124.0Q198 100 220 100H245Q265 100 277.5 86.0Q290 72 290 50Q290 28 271.0 14.0Q252 0 222 0Z"/><path transform="translate(1432.7 0)" d="M318 -4Q245 -4 187.0 32.5Q129 69 95.5 131.5Q62 194 62 273Q62 352 98.5 415.0Q135 478 197.5 514.5Q260 551 338 551Q416 551 478.0 514.5Q540 478 576.5 415.0Q613 352 613 273H574Q574 194 540.5 131.5Q507 69 449.0 32.5Q391 -4 318 -4ZM338 86Q389 86 429.0 110.5Q469 135 492.0 177.5Q515 220 515 273Q515 327 492.0 369.5Q469 412 429.0 436.5Q389 461 338 461Q288 461 247.5 436.5Q207 412 183.5 369.5Q160 327 160 273Q160 220 183.5 177.5Q207 135 247.5 110.5Q288 86 338 86ZM562 -1Q540 -1 525.5 13.5Q511 28 511 50V203L530 309L613 273V50Q613 28 598.5 13.5Q584 -1 562 -1Z"/></g></svg>
+<script>
+(() => {
+  const canvas = document.querySelector('canvas'), ctx = canvas.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // the logo is two half-discs, one tucked under the other. Columns of them, each column drifting the other way.
+  const A = '255,255,255', AA = [0.05, 0.09, 0.14, 0.2], B = '245,155,187', AB = [0.16, 0.26, 0.36];
+  const hash = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
+  let w = 0, h = 0, dpr = 1;
+  const ANGLE = Math.PI / 4; // the whole texture runs on a 45 degree diagonal
+  function draw(t) {
+    if (!w || !h) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    // draw in a square big enough to cover the card once it's turned
+    const D = Math.ceil(Math.hypot(w, h));
+    ctx.translate(w / 2, h / 2); ctx.rotate(ANGLE); ctx.translate(-D / 2, -D / 2);
+    // r: disc radius, g: gap across a logo's seam, s: space between neighbours. A column is 2r + g + s wide and the
+    // discs in it repeat every 2r + s, so nothing ever touches, even as the columns drift past each other.
+    const r = Math.max(34, Math.min(72, w / 18)), g = r * 0.12, s = r * 0.22, pitch = 2 * r + g + s, V = 2 * r + s;
+    const n = Math.ceil(D / pitch) + 2, x0 = (D - Math.floor(D / pitch) * pitch) / 2;
+    for (let c = -1; c < n; c++) {
+      const seam = x0 + c * pitch, dir = (c & 1) ? 1 : -1, base = c * 0.37 * V + dir * t * 14;
+      const k0 = Math.floor((-V - base) / V), k1 = Math.ceil((D + V - base) / V);
+      for (let k = k0; k <= k1; k++) {
+        const y = base + k * V;
+        ctx.fillStyle = `rgba(${B},${AB[Math.floor(hash(c + 17, k - 5) * AB.length)]})`;
+        ctx.beginPath(); ctx.arc(seam - g / 2, y, r, Math.PI / 2, Math.PI * 1.5); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = `rgba(${A},${AA[Math.floor(hash(c, k) * AA.length)]})`;
+        ctx.beginPath(); ctx.arc(seam + g / 2, y + V / 2, r, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  function resize() {
+    dpr = Math.min(2, devicePixelRatio || 1);
+    w = canvas.offsetWidth; h = canvas.offsetHeight;
+    canvas.width = Math.max(1, Math.round(w * dpr)); canvas.height = Math.max(1, Math.round(h * dpr));
+    draw(reduce ? 0 : performance.now() / 1000);
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+  if (reduce) return;
+  const tick = () => { if (!document.hidden) draw(performance.now() / 1000); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
